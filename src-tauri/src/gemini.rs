@@ -13,7 +13,7 @@ use crate::error::{GeminiError, PedaruError};
 /// Default LM Studio OpenAI-compatible API base URL
 const DEFAULT_LM_STUDIO_API_BASE: &str = "http://127.0.0.1:1234/v1";
 const DEFAULT_TIMEOUT_SECONDS: u64 = 180;
-const DEFAULT_MAX_TOKENS: u32 = 450;
+const DEFAULT_MAX_TOKENS: u32 = 120;
 const MAX_CONTEXT_CHARS: usize = 800;
 
 fn env_u64(name: &str, default: u64, min: u64, max: u64) -> u64 {
@@ -108,24 +108,52 @@ fn extract_points(value: &Value) -> Vec<String> {
 
 fn extract_chat_choice_text(choice: &ChatChoice) -> Option<String> {
     if let Some(message) = &choice.message {
-        // Primary content field
         if let Some(s) = value_to_text(&message.content) {
-            return Some(s);
+            let cleaned = clean_model_output(&s);
+            if !cleaned.trim().is_empty() {
+                return Some(cleaned);
+            }
         }
-        // LM Studio / reasoning-model fallback
+
         if let Some(s) = value_to_text(&message.reasoning_content) {
-            return Some(s);
+            let cleaned = clean_model_output(&s);
+            if !cleaned.trim().is_empty() {
+                return Some(cleaned);
+            }
         }
+
         if let Some(s) = value_to_text(&message.reasoning) {
-            return Some(s);
+            let cleaned = clean_model_output(&s);
+            if !cleaned.trim().is_empty() {
+                return Some(cleaned);
+            }
         }
     }
+
     choice
         .text
         .as_deref()
-        .map(str::trim)
-        .filter(|s| !s.is_empty())
-        .map(ToString::to_string)
+        .map(clean_model_output)
+        .filter(|s| !s.trim().is_empty())
+}
+
+fn clean_model_output(text: &str) -> String {
+    let mut result = text.trim().to_string();
+
+    if let Some(pos) = result.rfind("\"translation\"") {
+        result = result[pos..].to_string();
+    }
+
+    if let Some(pos) = result.rfind("Terjemahan:") {
+        result = result[pos..].to_string();
+    }
+
+    result
+        .replace("Thinking Process:", "")
+        .replace("Analyze the Request:", "")
+        .replace("Analyze the Context:", "")
+        .trim()
+        .to_string()
 }
 
 fn strip_think_blocks(text: &str) -> String {
@@ -171,13 +199,19 @@ fn sanitize_plain_translation_output(raw: &str) -> String {
 
 fn looks_like_prompt_echo(text: &str) -> bool {
     let lowered = text.to_lowercase();
+
     lowered.contains("thinking process")
         || lowered.contains("analyze the request")
-        || lowered.contains("output format")
-        || lowered.contains("critical rules")
+        || lowered.contains("analyze the context")
+        || lowered.contains("input text")
         || lowered.contains("selected text")
+        || lowered.contains("specific text to translate")
         || lowered.contains("context before")
         || lowered.contains("context after")
+        || lowered.contains("constraint")
+        || lowered.contains("task:")
+        || lowered.contains("output format")
+        || lowered.contains("critical rules")
         || lowered.contains("\"translation\": \"...\"")
 }
 
@@ -201,61 +235,23 @@ const TRANSLATION_SYSTEM_INSTRUCTION: &str = r#"You are a professional English-t
 
 ## Your Task
 Translate ONLY the "SELECTED TEXT" provided by the user. The context is for understanding only.
-
-## Output Format (STRICT - follow exactly):
-- Output MUST be valid JSON only. No markdown code blocks, no extra text.
-- The JSON structure MUST be:
-{
-  "translation": "Translation result in Indonesian (string)",
-  "points": ["Point 1 (string)", "Point 2 (string)", "Point 3 (string)"]
-}
-
-## Critical Rules:
-- The "points" field MUST be a flat array of strings. DO NOT use nested objects.
-- Each element in points must be a simple string, not an object.
-- All output text MUST be in Indonesian.
-- IMPORTANT: Translate ONLY the SELECTED TEXT, not the context.
-
-## Translation Rules:
-- For single words, idioms, or short phrases (no spaces, or 2-3 words):
-  - translation: Only the meaning of the word/idiom. NOT a translation of the entire sentence.
-  - points: A flat array of strings containing:
-    1. "ArtiKata: [explanation of the word in Indonesian]"
-    2. "KalimatAsli: [Extract the COMPLETE English sentence containing the word from the context, with ***highlighted*** word]"
-    3. "Terjemahan: [Indonesian translation of that complete sentence, with ***highlighted*** translation of the word]"
-    4. "Sinonim: [synonyms in English with Indonesian meanings]"
-  - Example output:
-    {
-      "translation": "memanfaatkan, menggunakan",
-      "points": [
-        "Arti kata: menggunakan atau memanfaatkan kekuatan/sumber daya secara efektif",
-        "Kalimat asli: The goal is to ***harness*** the power of AI.",
-        "Terjemahan: Tujuannya adalah untuk ***memanfaatkan*** kekuatan AI.",
-        "Sinonim / padanan: utilize = memanfaatkan, leverage = memanfaatkan/mengoptimalkan, exploit = menggunakan/memanfaatkan"
-        ]
-    }
-  - CRITICAL: How to find the Kalimat Asli (original sentence):
-    - The selected word appears at the EXACT BOUNDARY between "Context before" and "Context after".
-    - The Kalimat Asli containing the selected word is: (end of "Context before") + (selected word) + (beginning of "Context after")
-    - If the same word appears multiple times in the context, you MUST use ONLY the occurrence at the boundary position.
-    - DO NOT pick a sentence from earlier in Context before that happens to contain the same word.
-
-- For sentences or longer text:
-  - translation: Full Indonesian translation of the text
-  - points: A flat array of strings with grammatical explanations:
-    1. Each point is a single string explaining one grammar structure
-    2. Focus on challenging structures: relative clauses, participle constructions, etc.
-    3. Include synonyms or alternative expressions where helpful"#;
+IMPORTANT:
+- DO NOT show thinking process.
+- DO NOT explain your reasoing.
+- DO NOT repeat the context.
+- DO NOT write "Thinking Process".
+- DO NOT write "Analyze the Request".
+- ONLY return valid JSON.
+"#;
 
 // User prompt for translation (actual content - data only)
-const TRANSLATION_PROMPT: &str = r#"SELECTED TEXT (translate this):
+const TRANSLATION_PROMPT: &str = r#"Selected text:
 {text}
 
-Context before:
-{context_before}
+Context:
+{context_before} >>> {text} <<< {context_after}
 
-Context after:
-{context_after}"#;
+Final Indonesian translation only:"#;
 
 // System instruction for explanation (behavioral guidelines)
 const EXPLANATION_SYSTEM_INSTRUCTION: &str = r#"You are an expert at explaining complex concepts in simple, easy-to-understand terms.
@@ -666,12 +662,12 @@ pub async fn translate_text(
         Some(TRANSLATION_SYSTEM_INSTRUCTION),
     )
     .await?;
-    let parsed = parse_translation_response(&response_text)?;
-    let cleaned_primary = sanitize_plain_translation_output(&parsed.translation);
-    if is_translation_usable(&cleaned_primary) {
+    let cleaned = sanitize_plain_translation_output(&response_text);
+
+        if is_translation_usable(&cleaned) {
         return Ok(TranslationResponse {
-            translation: cleaned_primary,
-            points: parsed.points,
+            translation: cleaned,
+            points: vec![],
         });
     }
 
@@ -698,7 +694,7 @@ pub async fn translate_text(
     eprintln!("[Gemini] Plain translation mode still unusable, returning best-effort cleaned text.");
     Ok(TranslationResponse {
         translation: if cleaned_plain.trim().is_empty() {
-            cleaned_primary
+        "Model belum menghasilkan terjemahan yang bersih. Coba pilih teks lebih pendek.".to_string()
         } else {
             cleaned_plain
         },

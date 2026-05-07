@@ -111,7 +111,7 @@ Build outputs:
 
 ### 🌐 Gemini Translation
 
-- **Text Translation**: Select text and press `Cmd+D` / `Ctrl+J` to translate
+- **Text Translation**: Select text and press `Cmd+D` / `Ctrl+D` to translate
 - **Auto-Explanation**: Use `Cmd+E` / `Ctrl+E` for translation with grammar explanations
 - **Context-Aware**: Translation includes surrounding context for better accuracy
 - **Draggable Popup**: Move translation popup anywhere on screen
@@ -168,7 +168,7 @@ Build outputs:
 | -------------------------- | --------- | ------------- |
 | Search                     | `Cmd + F` | `Ctrl + F`    |
 | Toggle Bookmark            | `Cmd + B` | `Ctrl + B`    |
-| Translate                  | `Cmd + J` | `Ctrl + J`    |
+| Translate                  | `Cmd + D` | `Ctrl + D`    |
 | Translate with Explanation | `Cmd + E` | `Ctrl + E`    |
 | Select All Text            | `Cmd + A` | `Ctrl + A`    |
 
