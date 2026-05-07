@@ -115,7 +115,19 @@ function TranslationContent() {
   useEffect(() => {
     if (!windowLabel) return;
 
-    let unlisten: (() => void) | null = null;
+    let unlistenFn: (() => void) | null = null;
+    let isCleanedUp = false;
+    const safeUnlisten = () => {
+      if (!unlistenFn || isCleanedUp) return;
+      try {
+        unlistenFn();
+      } catch (err) {
+        console.warn("Failed to unlisten translation-data listener:", err);
+      } finally {
+        isCleanedUp = true;
+        unlistenFn = null;
+      }
+    };
 
     const setup = async () => {
       // Load Gemini settings
@@ -127,7 +139,7 @@ function TranslationContent() {
       }
 
       // Listen for translation data
-      unlisten = await listen<TranslationData>("translation-data", (event) => {
+      unlistenFn = await listen<TranslationData>("translation-data", (event) => {
         setData(event.payload);
         // Set window title
         const win = getCurrentWebviewWindow();
@@ -144,11 +156,11 @@ function TranslationContent() {
     setup();
 
     return () => {
-      if (unlisten) unlisten();
+      safeUnlisten();
     };
-  }, [windowLabel]);
+  }, [windowLabel])
 
-  // Handle "解説" button click
+  // Handle Explanation button click
   const handleExplain = useCallback(() => {
     if (!data?.translationResponse || isExplaining || !geminiSettings) return;
 
@@ -256,7 +268,11 @@ function TranslationContent() {
           )}
 
           {/* Original Text Section */}
-          <CollapsibleSection title="原文" icon={Languages} defaultOpen={false}>
+          <CollapsibleSection
+            title="Original Text"
+            icon={Languages}
+            defaultOpen={false}
+          >
             <p className="text-text-primary text-sm leading-relaxed font-mono whitespace-pre-wrap">
               {data.selectedText}
             </p>
@@ -264,18 +280,19 @@ function TranslationContent() {
 
           {/* Translation Section */}
           <CollapsibleSection
-            title="翻訳"
+            title="Terjemahan"
             icon={MessageSquare}
             defaultOpen={true}
           >
             <p className="text-text-primary text-sm leading-relaxed">
-              {data.translationResponse.translation || "(翻訳結果がありません)"}
+              {data.translationResponse.translation ||
+                "(No translation available)"}
             </p>
           </CollapsibleSection>
 
           {/* Points Section */}
           <CollapsibleSection
-            title="翻訳のポイント"
+            title="Translation Points"
             icon={BookOpen}
             defaultOpen={true}
           >
@@ -292,7 +309,7 @@ function TranslationContent() {
               </ul>
             ) : (
               <p className="text-text-tertiary text-sm">
-                (ポイントがありません)
+                (No points available)
               </p>
             )}
           </CollapsibleSection>
@@ -300,7 +317,7 @@ function TranslationContent() {
           {/* Explanation Section */}
           {(explanationSummary ||
             (explanationPoints && explanationPoints.length > 0)) && (
-            <CollapsibleSection title="解説" icon={Sparkles} defaultOpen={true}>
+            <CollapsibleSection title="Penjelasan" icon={Sparkles} defaultOpen={true}>
               <div className="space-y-3">
                 {/* Summary */}
                 {explanationSummary && (
@@ -335,7 +352,7 @@ function TranslationContent() {
               <div className="flex items-center gap-1.5">
                 <Cpu className="w-3 h-3" />
                 <span>
-                  翻訳:{" "}
+                  Terjemahan:{" "}
                   {GEMINI_MODELS.find((m) => m.id === geminiSettings.model)
                     ?.name || geminiSettings.model}
                 </span>
@@ -345,7 +362,7 @@ function TranslationContent() {
               <div className="flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 <span>
-                  解説:{" "}
+                  Penjelasan:{" "}
                   {GEMINI_MODELS.find(
                     (m) => m.id === geminiSettings.explanationModel,
                   )?.name || geminiSettings.explanationModel}
@@ -369,12 +386,12 @@ function TranslationContent() {
               {isExplaining ? (
                 <>
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  解説生成中...
+                  Generating explanation...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3 h-3" />
-                  解説
+                  Explanation
                 </>
               )}
             </button>

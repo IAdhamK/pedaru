@@ -292,11 +292,11 @@ mod tests {
         let conn = create_test_db();
         // File paths with special characters
         insert_test_session(&conn, "/path/to/file's.pdf", "O'Reilly PDF", 1000);
-        insert_test_session(&conn, "/path/to/日本語.pdf", "Japanese PDF", 2000);
+        insert_test_session(&conn, "/path/to/unicode/cafe-é.pdf", "Unicode PDF", 2000);
 
         let result = load_recent_files_from_connection(&conn, None);
         assert_eq!(result.len(), 2);
-        assert_eq!(result[0].file_path, "/path/to/日本語.pdf");
+        assert_eq!(result[0].file_path, "/path/to/unicode/cafe-é.pdf");
         assert_eq!(result[1].file_path, "/path/to/file's.pdf");
     }
 

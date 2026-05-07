@@ -10,7 +10,7 @@ import type { TextSelection } from "@/types";
 /**
  * Hook for detecting and managing PDF text selection
  *
- * Translation is triggered manually via Cmd+J, not automatically on selection.
+ * Translation is triggered manually via Cmd+D, not automatically on selection.
  *
  * @param pdfDocRef - Ref to the PDF document proxy from pdf.js
  * @param currentPage - The current page number
@@ -283,7 +283,7 @@ export function useTextSelection(
     return false;
   }, []);
 
-  // Manually trigger translation for current selection (called by Cmd+J or Cmd+E)
+  // Manually trigger translation for current selection (called by Cmd+D or Cmd+E)
   const triggerTranslation = useCallback(
     async (withExplanation: boolean = false) => {
       const windowSelection = window.getSelection();

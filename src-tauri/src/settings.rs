@@ -22,10 +22,10 @@ use crate::secure_string::SecureString;
 pub const KEY_GEMINI_MODEL: &str = "gemini_model";
 pub const KEY_GEMINI_EXPLANATION_MODEL: &str = "gemini_explanation_model";
 
-/// Default Gemini model for translation (fast)
-pub const DEFAULT_GEMINI_MODEL: &str = "gemini-2.0-flash";
-/// Default Gemini model for detailed explanation (can be more capable)
-pub const DEFAULT_GEMINI_EXPLANATION_MODEL: &str = "gemini-2.0-flash";
+/// Default model for translation (LM Studio local)
+pub const DEFAULT_GEMINI_MODEL: &str = "qwen/qwen3.5-9b";
+/// Default model for detailed explanation (LM Studio local)
+pub const DEFAULT_GEMINI_EXPLANATION_MODEL: &str = "qwen/qwen3.5-9b";
 
 // ============================================================================
 // Types
@@ -97,10 +97,22 @@ pub fn get_gemini_settings(app: &tauri::AppHandle) -> Result<GeminiSettings, Ped
         .unwrap_or_else(SecureString::default);
 
     // Get model names from SQLite (non-sensitive)
-    let model =
+    let model_raw =
         get_setting(app, KEY_GEMINI_MODEL)?.unwrap_or_else(|| DEFAULT_GEMINI_MODEL.to_string());
-    let explanation_model = get_setting(app, KEY_GEMINI_EXPLANATION_MODEL)?
+    let explanation_raw = get_setting(app, KEY_GEMINI_EXPLANATION_MODEL)?
         .unwrap_or_else(|| DEFAULT_GEMINI_EXPLANATION_MODEL.to_string());
+
+    // Auto-migrate legacy Gemini cloud model IDs to LM Studio local default model.
+    let model = if model_raw.starts_with("gemini-") {
+        DEFAULT_GEMINI_MODEL.to_string()
+    } else {
+        model_raw
+    };
+    let explanation_model = if explanation_raw.starts_with("gemini-") {
+        DEFAULT_GEMINI_EXPLANATION_MODEL.to_string()
+    } else {
+        explanation_raw
+    };
 
     Ok(GeminiSettings {
         api_key,

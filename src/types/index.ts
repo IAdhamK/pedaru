@@ -278,16 +278,10 @@ export interface DownloadProgress {
 // ============================================
 
 /**
- * Available Gemini models
+ * Available translation model identifier
+ * (LM Studio uses free-form model IDs from loaded local models).
  */
-export type GeminiModel =
-  | "gemini-2.0-flash"
-  | "gemini-2.0-flash-lite"
-  | "gemini-2.5-flash"
-  | "gemini-2.5-flash-lite"
-  | "gemini-2.5-pro"
-  | "gemini-3-flash-preview"
-  | "gemini-3-pro-preview";
+export type GeminiModel = string;
 
 /**
  * Gemini model option for UI

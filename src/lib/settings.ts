@@ -2,7 +2,7 @@
  * Settings management functions
  *
  * This module provides functions to manage application settings,
- * particularly Gemini translation settings.
+ * particularly translation settings for local LM Studio.
  */
 
 import { invoke } from "@tauri-apps/api/core";
@@ -17,8 +17,8 @@ import type {
 // Default Values
 // ============================================
 
-export const DEFAULT_GEMINI_MODEL = "gemini-2.0-flash";
-export const DEFAULT_GEMINI_EXPLANATION_MODEL = "gemini-2.0-flash";
+export const DEFAULT_GEMINI_MODEL = "qwen/qwen3.5-9b";
+export const DEFAULT_GEMINI_EXPLANATION_MODEL = "qwen/qwen3.5-9b";
 
 export const DEFAULT_GEMINI_SETTINGS: GeminiSettings = {
   apiKey: "",
@@ -32,39 +32,19 @@ export const DEFAULT_GEMINI_SETTINGS: GeminiSettings = {
 
 export const GEMINI_MODELS: GeminiModelOption[] = [
   {
-    id: "gemini-2.0-flash",
-    name: "Gemini 2.0 Flash",
-    description: "Fast and efficient (Recommended)",
+    id: "qwen/qwen3.5-9b",
+    name: "Qwen 3.5 9B",
+    description: "LM Studio local model (Recommended)",
   },
   {
-    id: "gemini-2.0-flash-lite",
-    name: "Gemini 2.0 Flash-Lite",
-    description: "Cost-effective for high volume",
+    id: "qwen/qwen3-8b",
+    name: "Qwen 3 8B",
+    description: "Fast local option",
   },
   {
-    id: "gemini-2.5-flash",
-    name: "Gemini 2.5 Flash",
-    description: "Latest flash model with adaptive thinking",
-  },
-  {
-    id: "gemini-2.5-flash-lite",
-    name: "Gemini 2.5 Flash-Lite",
-    description: "Optimized for efficiency",
-  },
-  {
-    id: "gemini-2.5-pro",
-    name: "Gemini 2.5 Pro",
-    description: "Best for complex tasks",
-  },
-  {
-    id: "gemini-3-flash-preview",
-    name: "Gemini 3 Flash (Preview)",
-    description: "Latest preview with advanced reasoning",
-  },
-  {
-    id: "gemini-3-pro-preview",
-    name: "Gemini 3 Pro (Preview)",
-    description: "Most capable preview model",
+    id: "meta-llama-3.1-8b-instruct",
+    name: "Llama 3.1 8B Instruct",
+    description: "Alternative local instruction model",
   },
 ];
 
@@ -133,9 +113,11 @@ export async function explainDirectly(
 }
 
 /**
- * Check if Gemini API key is configured
+ * Check if translation is configured
+ *
+ * For LM Studio local usage, API key is optional.
  */
 export async function isGeminiConfigured(): Promise<boolean> {
   const settings = await getGeminiSettings();
-  return settings.apiKey.trim().length > 0;
+  return settings.model.trim().length > 0;
 }

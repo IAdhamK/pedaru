@@ -307,7 +307,7 @@ export default function TranslationPopup({
     };
   }, [selection, autoExplain]);
 
-  // Handle "解説" button click - get more detailed explanation
+  // Handle Explanation button click - get more detailed explanation
   const handleExplain = useCallback(() => {
     if (!translationResponse || isExplaining || !geminiSettings) return;
 
@@ -365,12 +365,26 @@ export default function TranslationPopup({
     const url = `${origin}/translation?windowLabel=${encodeURIComponent(windowLabel)}`;
 
     try {
+      let unlistenFn: (() => void) | null = null;
+      let isUnlistened = false;
+      const safeUnlisten = () => {
+        if (!unlistenFn || isUnlistened) return;
+        try {
+          unlistenFn();
+        } catch (err) {
+          console.warn("Failed to unlisten translation-ready listener:", err);
+        } finally {
+          isUnlistened = true;
+          unlistenFn = null;
+        }
+      };
+
       // Listen for ready signal from the new window before sending data
-      const unlisten = await listen<{ windowLabel: string }>(
+      unlistenFn = await listen<{ windowLabel: string }>(
         "translation-ready",
         async (event) => {
           if (event.payload.windowLabel === windowLabel) {
-            unlisten();
+            safeUnlisten();
             await emitTo(windowLabel, "translation-data", {
               selectedText: selection.selectedText,
               contextBefore: selection.contextBefore,
@@ -395,7 +409,7 @@ export default function TranslationPopup({
 
       webview.once("tauri://error", (e) => {
         console.error("Failed to create translation window:", e);
-        unlisten();
+        safeUnlisten();
       });
     } catch (e) {
       console.error("Failed to open translation window:", e);
@@ -493,10 +507,10 @@ export default function TranslationPopup({
           <div className="flex flex-col items-center justify-center py-4 text-center">
             <AlertCircle className="w-8 h-8 text-yellow-500 mb-2" />
             <p className="text-sm text-text-primary mb-2">
-              API Key Not Configured
+              Translation Model Not Configured
             </p>
             <p className="text-xs text-text-tertiary mb-3">
-              Please set your Gemini API key in Settings to use translation.
+              Please set your LM Studio model in Settings to use translation.
             </p>
             {onOpenSettings && (
               <button
@@ -534,7 +548,7 @@ export default function TranslationPopup({
           <div className="space-y-2">
             {/* Original Text Section */}
             <CollapsibleSection
-              title="原文"
+              title="Original Text"
               icon={Languages}
               defaultOpen={false}
             >
@@ -548,7 +562,7 @@ export default function TranslationPopup({
             (explanationSummary ||
               (explanationPoints && explanationPoints.length > 0)) ? (
               <CollapsibleSection
-                title="解説"
+                title="Explanation"
                 icon={Sparkles}
                 defaultOpen={true}
               >
@@ -579,19 +593,19 @@ export default function TranslationPopup({
               <>
                 {/* Translation Section */}
                 <CollapsibleSection
-                  title="翻訳"
+                  title="Translation"
                   icon={MessageSquare}
                   defaultOpen={true}
                 >
                   <p className="text-text-primary text-sm leading-relaxed">
                     {translationResponse.translation ||
-                      "(翻訳結果がありません)"}
+                      "(No translation available)"}
                   </p>
                 </CollapsibleSection>
 
                 {/* Points Section */}
                 <CollapsibleSection
-                  title="翻訳のポイント"
+                  title="Translation Points"
                   icon={BookOpen}
                   defaultOpen={true}
                 >
@@ -608,16 +622,16 @@ export default function TranslationPopup({
                     </ul>
                   ) : (
                     <p className="text-text-tertiary text-sm">
-                      (ポイントがありません)
+                      (No points available)
                     </p>
                   )}
                 </CollapsibleSection>
 
-                {/* Explanation Section (shown after clicking 解説 button in translation mode) */}
+                {/* Explanation Section (shown after clicking Explanation button in translation mode) */}
                 {(explanationSummary ||
                   (explanationPoints && explanationPoints.length > 0)) && (
                   <CollapsibleSection
-                    title="解説"
+                    title="Explanation"
                     icon={Sparkles}
                     defaultOpen={true}
                   >
@@ -663,7 +677,7 @@ export default function TranslationPopup({
               <div className="flex items-center gap-1.5">
                 <Cpu className="w-3 h-3" />
                 <span>
-                  翻訳:{" "}
+                  Translation:{" "}
                   {GEMINI_MODELS.find((m) => m.id === geminiSettings.model)
                     ?.name || geminiSettings.model}
                 </span>
@@ -674,7 +688,7 @@ export default function TranslationPopup({
               <div className="flex items-center gap-1.5">
                 <Sparkles className="w-3 h-3" />
                 <span>
-                  解説:{" "}
+                  Explanation:{" "}
                   {GEMINI_MODELS.find(
                     (m) => m.id === geminiSettings.explanationModel,
                   )?.name || geminiSettings.explanationModel}
@@ -698,12 +712,12 @@ export default function TranslationPopup({
               {isExplaining ? (
                 <>
                   <Loader2 className="w-3 h-3 animate-spin" />
-                  解説生成中...
+                  Generating explanation...
                 </>
               ) : (
                 <>
                   <Sparkles className="w-3 h-3" />
-                  解説
+                  Explanation
                 </>
               )}
             </button>

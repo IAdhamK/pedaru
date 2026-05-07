@@ -280,13 +280,13 @@ export default function Settings({
 
           {activeTab === "translation" && (
             <div className="space-y-6">
-              {/* API Key */}
+              {/* Optional local API token */}
               <div>
                 <label
                   htmlFor="gemini-api-key"
                   className="block text-sm font-medium text-text-primary mb-2"
                 >
-                  Gemini API Key
+                  LM Studio Token (Optional)
                 </label>
                 <div className="relative">
                   <input
@@ -299,7 +299,7 @@ export default function Settings({
                         apiKey: e.target.value,
                       })
                     }
-                    placeholder="Enter your Gemini API key"
+                    placeholder="Optional bearer token if your local server requires it"
                     className="w-full px-3 py-2 pr-10 bg-bg-primary border border-bg-tertiary rounded-lg text-text-primary placeholder:text-text-tertiary focus:outline-none focus:ring-2 focus:ring-accent/50"
                   />
                   <button
@@ -315,15 +315,8 @@ export default function Settings({
                   </button>
                 </div>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  Get your API key from{" "}
-                  <a
-                    href="https://aistudio.google.com/app/apikey"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-accent hover:underline"
-                  >
-                    Google AI Studio
-                  </a>
+                  Leave empty for standard LM Studio local server
+                  (`http://127.0.0.1:1234`).
                 </p>
               </div>
 
@@ -333,7 +326,7 @@ export default function Settings({
                   htmlFor="translation-model"
                   className="block text-sm font-medium text-text-primary mb-2"
                 >
-                  翻訳モデル
+                  Translation Model
                 </label>
                 <select
                   id="translation-model"
@@ -353,7 +346,7 @@ export default function Settings({
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  Cmd+Jで翻訳する際に使用するモデル
+                  Model used when translating with Cmd+D
                 </p>
               </div>
 
@@ -363,7 +356,7 @@ export default function Settings({
                   htmlFor="explanation-model"
                   className="block text-sm font-medium text-text-primary mb-2"
                 >
-                  解説モデル
+                  Explanation Model
                 </label>
                 <select
                   id="explanation-model"
@@ -383,7 +376,8 @@ export default function Settings({
                   ))}
                 </select>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  「解説」ボタンを押した際に使用するモデル（より賢いモデルを推奨）
+                  Model used when clicking the "Explanation" button (a more
+                  capable model is recommended)
                 </p>
               </div>
 

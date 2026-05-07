@@ -29,7 +29,7 @@ pub enum PedaruError {
     #[error("Google Drive error: {0}")]
     GoogleDrive(#[from] GoogleDriveError),
 
-    #[error("Gemini API error: {0}")]
+    #[error("LM Studio API error: {0}")]
     Gemini(#[from] GeminiError),
 
     #[error("Secrets storage error: {0}")]
@@ -151,10 +151,10 @@ pub enum GoogleDriveError {
     InvalidFolderId(String),
 }
 
-/// Gemini API errors
+/// Translation API errors (LM Studio local)
 #[derive(Error, Debug)]
 pub enum GeminiError {
-    #[error("API key not configured")]
+    #[error("LM Studio token/API key not configured")]
     ApiKeyMissing,
 
     #[error("API request failed: {0}")]

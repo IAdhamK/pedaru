@@ -207,7 +207,7 @@ Session saves are debounced (500ms) to avoid excessive database writes. The sess
 - `useWindowManagement.ts` - Standalone window lifecycle management
 - `usePdfLoader.ts` - PDF loading and session restoration logic
 - `useKeyboardShortcuts.ts` - Centralized keyboard shortcut handling
-- `useTextSelection.ts` - PDF text selection for translation (Cmd+J trigger)
+- `useTextSelection.ts` - PDF text selection for translation (Cmd+D trigger)
 - `useBookshelf.ts` - Google Drive bookshelf management
 - `useGoogleAuth.ts` - Google OAuth authentication flow
 - `types.ts` - Shared TypeScript types for hooks
@@ -380,7 +380,7 @@ The app integrates with Google's Gemini API for PDF text translation:
 - `src/components/TranslationPopup.tsx` - Translation UI with collapsible sections
 
 **Translation Flow:**
-1. User selects text in PDF and presses `Cmd+J` (or `Cmd+E` for auto-explanation)
+1. User selects text in PDF and presses `Cmd+D` (or `Cmd+E` for auto-explanation)
 2. `useTextSelection` extracts selected text and surrounding context from adjacent pages
 3. Frontend calls `translate_with_gemini` Tauri command
 4. Backend sends prompt to Gemini API with `response_mime_type: "application/json"`

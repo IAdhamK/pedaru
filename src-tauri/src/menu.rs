@@ -346,7 +346,7 @@ mod tests {
             "/simple/path.pdf",
             "/path/with spaces/file.pdf",
             "/path/with'quote/file.pdf",
-            "/日本語/パス/ファイル.pdf",
+            "/unicode/path/cafe-é/📄.pdf",
             "/path/with/unicode/émoji/📄.pdf",
         ];
 

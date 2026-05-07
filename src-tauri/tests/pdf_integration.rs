@@ -7,9 +7,11 @@
 //!
 //! PDF fixture files are located in `tests/fixtures/`:
 //! - `encrypted_empty_password.pdf` - Simple encrypted PDF with empty user password
-//! - `encrypted_japanese.pdf` - Encrypted PDF with Japanese metadata and TOC
 
-use lopdf::{Document, Object, ObjectId, Stream, StringFormat};
+use lopdf::{
+    Document, EncryptionState, EncryptionVersion, Object, ObjectId, Permissions, Stream,
+    StringFormat,
+};
 use pedaru_lib::pdf::extract_toc;
 use pedaru_lib::types::TocEntry;
 use std::io::Write;
@@ -177,19 +179,19 @@ fn create_pdf_with_toc() -> Document {
     doc
 }
 
-/// Create a PDF with Japanese metadata
-fn create_pdf_with_japanese_metadata() -> Document {
+/// Create a PDF with UTF-16BE metadata
+fn create_pdf_with_utf16_metadata() -> Document {
     let mut doc = create_simple_pdf(1);
 
-    // Create Info dictionary with Japanese text (UTF-16BE)
+    // Create Info dictionary with UTF-16BE text
     let mut info = lopdf::Dictionary::new();
 
-    // UTF-16BE encoded "日本語タイトル" with BOM
-    let title_bytes = create_utf16be_string("日本語タイトル");
+    // UTF-16BE encoded "Unicode Title" with BOM
+    let title_bytes = create_utf16be_string("Unicode Title");
     info.set("Title", Object::String(title_bytes, StringFormat::Literal));
 
-    // UTF-16BE encoded "著者名" with BOM
-    let author_bytes = create_utf16be_string("著者名");
+    // UTF-16BE encoded "Author Name" with BOM
+    let author_bytes = create_utf16be_string("Author Name");
     info.set(
         "Author",
         Object::String(author_bytes, StringFormat::Literal),
@@ -199,6 +201,139 @@ fn create_pdf_with_japanese_metadata() -> Document {
     doc.trailer.set("Info", Object::Reference(info_id));
 
     doc
+}
+
+/// Create a 3-page PDF with English metadata and TOC structure
+fn create_pdf_with_english_metadata_and_toc() -> Document {
+    let mut doc = create_simple_pdf(3);
+    let pages = doc.get_pages();
+
+    let catalog_id = match doc.trailer.get(b"Root") {
+        Ok(Object::Reference(id)) => *id,
+        _ => panic!("No catalog found"),
+    };
+
+    let page_ids: Vec<ObjectId> = pages.values().cloned().collect();
+
+    let child_outline_id = doc.new_object_id();
+    let mut child_outline = lopdf::Dictionary::new();
+    child_outline.set(
+        "Title",
+        Object::String(
+            b"Section 1.1 Overview".to_vec(),
+            StringFormat::Literal,
+        ),
+    );
+    child_outline.set(
+        "Dest",
+        Object::Array(vec![
+            Object::Reference(page_ids[1]),
+            Object::Name(b"Fit".to_vec()),
+        ]),
+    );
+
+    let first_outline_id = doc.new_object_id();
+    let mut first_outline = lopdf::Dictionary::new();
+    first_outline.set(
+        "Title",
+        Object::String(
+            b"Chapter 1 Introduction".to_vec(),
+            StringFormat::Literal,
+        ),
+    );
+    first_outline.set(
+        "Dest",
+        Object::Array(vec![
+            Object::Reference(page_ids[0]),
+            Object::Name(b"Fit".to_vec()),
+        ]),
+    );
+    first_outline.set("First", Object::Reference(child_outline_id));
+    first_outline.set("Last", Object::Reference(child_outline_id));
+
+    child_outline.set("Parent", Object::Reference(first_outline_id));
+    doc.objects
+        .insert(child_outline_id, Object::Dictionary(child_outline));
+
+    let second_outline_id = doc.new_object_id();
+    let mut second_outline = lopdf::Dictionary::new();
+    second_outline.set(
+        "Title",
+        Object::String(
+            b"Chapter 2 Main Discussion".to_vec(),
+            StringFormat::Literal,
+        ),
+    );
+    second_outline.set(
+        "Dest",
+        Object::Array(vec![
+            Object::Reference(page_ids[2]),
+            Object::Name(b"Fit".to_vec()),
+        ]),
+    );
+
+    first_outline.set("Next", Object::Reference(second_outline_id));
+    second_outline.set("Prev", Object::Reference(first_outline_id));
+
+    let outlines_id = doc.new_object_id();
+    let mut outlines = lopdf::Dictionary::new();
+    outlines.set("Type", Object::Name(b"Outlines".to_vec()));
+    outlines.set("First", Object::Reference(first_outline_id));
+    outlines.set("Last", Object::Reference(second_outline_id));
+    outlines.set("Count", Object::Integer(3));
+
+    first_outline.set("Parent", Object::Reference(outlines_id));
+    second_outline.set("Parent", Object::Reference(outlines_id));
+
+    doc.objects
+        .insert(first_outline_id, Object::Dictionary(first_outline));
+    doc.objects
+        .insert(second_outline_id, Object::Dictionary(second_outline));
+    doc.objects
+        .insert(outlines_id, Object::Dictionary(outlines));
+
+    if let Ok(Object::Dictionary(cat_dict)) = doc.get_object_mut(catalog_id) {
+        cat_dict.set("Outlines", Object::Reference(outlines_id));
+    }
+
+    let mut info = lopdf::Dictionary::new();
+    info.set(
+        "Title",
+        Object::String(
+            create_utf16be_string("Encrypted Test Document"),
+            StringFormat::Literal,
+        ),
+    );
+    info.set(
+        "Author",
+        Object::String(
+            create_utf16be_string("Sample Author"),
+            StringFormat::Literal,
+        ),
+    );
+    let info_id = doc.add_object(info);
+    doc.trailer.set("Info", Object::Reference(info_id));
+
+    doc
+}
+
+/// Create and load a generated encrypted English PDF for integration tests
+fn load_generated_encrypted_english_pdf() -> Document {
+    let mut doc = create_pdf_with_english_metadata_and_toc();
+    let version = EncryptionVersion::V2 {
+        document: &doc,
+        owner_password: "owner",
+        user_password: "",
+        key_length: 40,
+        permissions: Permissions::all(),
+    };
+    let state =
+        EncryptionState::try_from(version).expect("Failed to build encryption state for test");
+    doc.encrypt(&state)
+        .expect("Failed to encrypt generated English test PDF");
+
+    let temp_file = save_to_temp_file(&mut doc);
+    Document::load(temp_file.path()).expect("Failed to load generated encrypted English test PDF")
 }
 
 /// Create UTF-16BE encoded string with BOM
@@ -257,21 +392,21 @@ fn test_extract_toc_with_chapters() {
 }
 
 #[test]
-fn test_pdf_with_japanese_metadata() {
+fn test_pdf_with_utf16_metadata() {
     use pedaru_lib::encoding::decode_pdf_string;
 
-    let doc = create_pdf_with_japanese_metadata();
+    let doc = create_pdf_with_utf16_metadata();
 
     // Get Info dictionary
     if let Ok(Object::Reference(info_ref)) = doc.trailer.get(b"Info") {
         if let Ok(info_dict) = doc.get_dictionary(*info_ref) {
             // Test title decoding
             let title = info_dict.get(b"Title").ok().and_then(decode_pdf_string);
-            assert_eq!(title, Some("日本語タイトル".to_string()));
+            assert_eq!(title, Some("Unicode Title".to_string()));
 
             // Test author decoding
             let author = info_dict.get(b"Author").ok().and_then(decode_pdf_string);
-            assert_eq!(author, Some("著者名".to_string()));
+            assert_eq!(author, Some("Author Name".to_string()));
         } else {
             panic!("Failed to get Info dictionary");
         }
@@ -373,59 +508,37 @@ fn test_encrypted_pdf_is_recognized_as_encrypted() {
 }
 
 // ============================================================================
-// Encrypted PDF with Japanese metadata and TOC tests
-// Fixture: tests/fixtures/encrypted_japanese.pdf
-// - Title: 暗号化テスト文書
-// - Author: 山田太郎
-// - TOC: 第1章 はじめに (page 1), セクション1.1 概要 (page 2), 第2章 本論 (page 3)
+// Encrypted PDF with English metadata and TOC tests (runtime-generated)
 // ============================================================================
 
 #[test]
-fn test_encrypted_pdf_japanese_loads() {
-    // Test that encrypted PDF with Japanese content can be loaded
-    let doc = load_encrypted_pdf_fixture("encrypted_japanese.pdf");
+fn test_encrypted_pdf_english_loads() {
+    let doc = load_generated_encrypted_english_pdf();
 
-    // The document should have 3 pages
     let pages = doc.get_pages();
     assert_eq!(
         pages.len(),
         3,
-        "Encrypted PDF with Japanese content should have 3 pages"
+        "Encrypted PDF with English content should have 3 pages"
     );
-
-    // Should have Encrypt dictionary
     assert!(
         doc.trailer.get(b"Encrypt").is_ok(),
-        "Should have Encrypt dictionary"
+        "Generated encrypted PDF should have Encrypt dictionary"
     );
 }
 
 #[test]
-fn test_encrypted_pdf_japanese_title_not_garbled() {
+fn test_encrypted_pdf_english_title_decodes_correctly() {
     use pedaru_lib::encoding::decode_pdf_string;
 
-    let doc = load_encrypted_pdf_fixture("encrypted_japanese.pdf");
-
-    // Get Info dictionary
+    let doc = load_generated_encrypted_english_pdf();
     if let Ok(Object::Reference(info_ref)) = doc.trailer.get(b"Info") {
         if let Ok(info_dict) = doc.get_dictionary(*info_ref) {
-            // Test title decoding - should be "暗号化テスト文書"
             let title = info_dict.get(b"Title").ok().and_then(decode_pdf_string);
-            assert!(title.is_some(), "Title should be decodable");
-
-            let title_str = title.unwrap();
-            // Verify it's not garbled (contains expected Japanese characters)
-            assert!(
-                title_str.contains("暗号化")
-                    || title_str.contains("テスト")
-                    || title_str.contains("文書"),
-                "Title should contain Japanese text without garbling. Got: {}",
-                title_str
-            );
-            // Exact match
             assert_eq!(
-                title_str, "暗号化テスト文書",
-                "Title should be exactly '暗号化テスト文書'"
+                title,
+                Some("Encrypted Test Document".to_string()),
+                "Title should be decoded exactly"
             );
         } else {
             panic!("Failed to get Info dictionary");
@@ -436,23 +549,17 @@ fn test_encrypted_pdf_japanese_title_not_garbled() {
 }
 
 #[test]
-fn test_encrypted_pdf_japanese_author_not_garbled() {
+fn test_encrypted_pdf_english_author_decodes_correctly() {
     use pedaru_lib::encoding::decode_pdf_string;
 
-    let doc = load_encrypted_pdf_fixture("encrypted_japanese.pdf");
-
-    // Get Info dictionary
+    let doc = load_generated_encrypted_english_pdf();
     if let Ok(Object::Reference(info_ref)) = doc.trailer.get(b"Info") {
         if let Ok(info_dict) = doc.get_dictionary(*info_ref) {
-            // Test author decoding - should be "山田太郎"
             let author = info_dict.get(b"Author").ok().and_then(decode_pdf_string);
-            assert!(author.is_some(), "Author should be decodable");
-
-            let author_str = author.unwrap();
             assert_eq!(
-                author_str, "山田太郎",
-                "Author should be exactly '山田太郎'. Got: {}",
-                author_str
+                author,
+                Some("Sample Author".to_string()),
+                "Author should be decoded exactly"
             );
         } else {
             panic!("Failed to get Info dictionary");
@@ -463,12 +570,9 @@ fn test_encrypted_pdf_japanese_author_not_garbled() {
 }
 
 #[test]
-fn test_encrypted_pdf_japanese_toc_extraction() {
-    // Test TOC extraction from encrypted PDF with Japanese TOC
-    let doc = load_encrypted_pdf_fixture("encrypted_japanese.pdf");
+fn test_encrypted_pdf_english_toc_extraction() {
+    let doc = load_generated_encrypted_english_pdf();
     let toc = extract_toc(&doc);
-
-    // Should have 2 top-level entries
     assert_eq!(
         toc.len(),
         2,
@@ -478,31 +582,25 @@ fn test_encrypted_pdf_japanese_toc_extraction() {
 }
 
 #[test]
-fn test_encrypted_pdf_japanese_toc_titles_not_garbled() {
-    // Test that Japanese TOC titles are correctly decoded
-    let doc = load_encrypted_pdf_fixture("encrypted_japanese.pdf");
+fn test_encrypted_pdf_english_toc_titles() {
+    let doc = load_generated_encrypted_english_pdf();
     let toc = extract_toc(&doc);
 
     assert!(!toc.is_empty(), "TOC should not be empty");
-
-    // First chapter: "第1章 はじめに"
     assert_eq!(
-        toc[0].title, "第1章 はじめに",
-        "First TOC entry should be '第1章 はじめに'. Got: {}",
-        toc[0].title
+        toc[0].title, "Chapter 1 Introduction",
+        "First TOC entry title mismatch"
     );
     assert_eq!(toc[0].page, Some(1), "First chapter should be on page 1");
 
-    // First chapter has a child: "セクション1.1 概要"
     assert_eq!(
         toc[0].children.len(),
         1,
         "First chapter should have 1 child"
     );
     assert_eq!(
-        toc[0].children[0].title, "セクション1.1 概要",
-        "Child TOC entry should be 'セクション1.1 概要'. Got: {}",
-        toc[0].children[0].title
+        toc[0].children[0].title, "Section 1.1 Overview",
+        "Child TOC entry title mismatch"
     );
     assert_eq!(
         toc[0].children[0].page,
@@ -510,11 +608,9 @@ fn test_encrypted_pdf_japanese_toc_titles_not_garbled() {
         "Child section should be on page 2"
     );
 
-    // Second chapter: "第2章 本論"
     assert_eq!(
-        toc[1].title, "第2章 本論",
-        "Second TOC entry should be '第2章 本論'. Got: {}",
-        toc[1].title
+        toc[1].title, "Chapter 2 Main Discussion",
+        "Second TOC entry title mismatch"
     );
     assert_eq!(toc[1].page, Some(3), "Second chapter should be on page 3");
     assert!(
@@ -524,14 +620,11 @@ fn test_encrypted_pdf_japanese_toc_titles_not_garbled() {
 }
 
 #[test]
-fn test_encrypted_pdf_japanese_toc_page_numbers() {
-    // Test that page numbers are correctly extracted from encrypted PDF
-    let doc = load_encrypted_pdf_fixture("encrypted_japanese.pdf");
+fn test_encrypted_pdf_english_toc_page_numbers() {
+    let doc = load_generated_encrypted_english_pdf();
     let toc = extract_toc(&doc);
 
     assert_eq!(toc.len(), 2, "Should have 2 top-level entries");
-
-    // Verify page numbers
     assert_eq!(toc[0].page, Some(1), "Chapter 1 should be on page 1");
     assert_eq!(
         toc[0].children[0].page,

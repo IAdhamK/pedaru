@@ -369,9 +369,9 @@ export function useKeyboardShortcuts({
             }
           }
           break;
-        case "j":
-        case "J":
-          // Cmd/Ctrl+J - translate selected text
+        case "d":
+        case "D":
+          // Cmd/Ctrl+D - translate selected text
           if (e.metaKey || e.ctrlKey) {
             e.preventDefault();
             triggerTranslation();
