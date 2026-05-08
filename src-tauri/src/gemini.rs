@@ -96,10 +96,10 @@ fn value_to_text(value: &Value) -> Option<String> {
                 "result",
                 "message",
             ] {
-                if let Some(v) = value.get(key) {
-                    if let Some(s) = value_to_text(v) {
-                        return Some(s);
-                    }
+                if let Some(v) = value.get(key)
+                    && let Some(s) = value_to_text(v)
+                {
+                    return Some(s);
                 }
             }
 
@@ -207,10 +207,10 @@ fn sanitize_plain_translation_output(raw: &str) -> String {
         }
     }
 
-    if let Ok(value) = serde_json::from_str::<Value>(&s) {
-        if let Some(extracted) = value_to_text(&value) {
-            s = extracted.trim().to_string();
-        }
+    if let Ok(value) = serde_json::from_str::<Value>(&s)
+        && let Some(extracted) = value_to_text(&value)
+    {
+        s = extracted.trim().to_string();
     }
 
     s
@@ -1030,7 +1030,7 @@ fn parse_translation_response(text: &str) -> Result<TranslationResponse, PedaruE
     }
 
     // Try to parse as a more flexible JSON structure
-    if let Ok(value) = serde_json::from_str::<Value>(&cleaned) {
+    if let Ok(value) = serde_json::from_str::<Value>(cleaned) {
         eprintln!("[Gemini] Parsed as Value: {:?}", value);
 
         // Handle both object and array responses
@@ -1353,15 +1353,15 @@ pub async fn explain_text(
     )
     .await?;
 
-    if let Ok(parsed) = parse_explanation_response(&response_text) {
-        if is_explanation_usable(&parsed) {
-            return Ok(parsed);
-        }
+    if let Ok(parsed) = parse_explanation_response(&response_text)
+        && is_explanation_usable(&parsed)
+    {
+        return Ok(parsed);
     }
-    if let Some(parsed) = parse_explanation_from_any_plain_text(&response_text) {
-        if is_explanation_usable(&parsed) {
-            return Ok(parsed);
-        }
+    if let Some(parsed) = parse_explanation_from_any_plain_text(&response_text)
+        && is_explanation_usable(&parsed)
+    {
+        return Ok(parsed);
     }
 
     eprintln!("[Gemini] Structured explanation unusable, retrying with strict short prompt...");
@@ -1388,15 +1388,15 @@ pub async fn explain_text(
     )
     .await
     {
-        if let Ok(parsed) = parse_explanation_response(&fallback_text) {
-            if is_explanation_usable(&parsed) {
-                return Ok(parsed);
-            }
+        if let Ok(parsed) = parse_explanation_response(&fallback_text)
+            && is_explanation_usable(&parsed)
+        {
+            return Ok(parsed);
         }
-        if let Some(parsed) = parse_explanation_from_any_plain_text(&fallback_text) {
-            if is_explanation_usable(&parsed) {
-                return Ok(parsed);
-            }
+        if let Some(parsed) = parse_explanation_from_any_plain_text(&fallback_text)
+            && is_explanation_usable(&parsed)
+        {
+            return Ok(parsed);
         }
     } else {
         eprintln!("[Gemini] JSON explanation fallback request failed.");
@@ -1425,15 +1425,15 @@ pub async fn explain_text(
     )
     .await
     {
-        if let Some(parsed) = parse_explanation_from_plain_text(&plain_fallback_text) {
-            if is_explanation_usable(&parsed) {
-                return Ok(parsed);
-            }
+        if let Some(parsed) = parse_explanation_from_plain_text(&plain_fallback_text)
+            && is_explanation_usable(&parsed)
+        {
+            return Ok(parsed);
         }
-        if let Some(parsed) = parse_explanation_from_any_plain_text(&plain_fallback_text) {
-            if is_explanation_usable(&parsed) {
-                return Ok(parsed);
-            }
+        if let Some(parsed) = parse_explanation_from_any_plain_text(&plain_fallback_text)
+            && is_explanation_usable(&parsed)
+        {
+            return Ok(parsed);
         }
     } else {
         eprintln!("[Gemini] Plain explanation fallback request failed.");

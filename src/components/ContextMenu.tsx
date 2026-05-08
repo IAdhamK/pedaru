@@ -75,8 +75,18 @@ export default function ContextMenu({
 
   const menuItems = [
     { label: "Copy", icon: Copy, onClick: onCopy, shortcut: "Cmd+C" },
-    { label: "Terjemahan", icon: Languages, onClick: onTranslate, shortcut: "Cmd+D" },
-    { label: "Penjelasan", icon: Sparkles, onClick: onExplain, shortcut: "Cmd+E" },
+    {
+      label: "Terjemahan",
+      icon: Languages,
+      onClick: onTranslate,
+      shortcut: "Cmd+D",
+    },
+    {
+      label: "Penjelasan",
+      icon: Sparkles,
+      onClick: onExplain,
+      shortcut: "Cmd+E",
+    },
   ];
 
   return (

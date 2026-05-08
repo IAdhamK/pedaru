@@ -139,15 +139,18 @@ function TranslationContent() {
       }
 
       // Listen for translation data
-      unlistenFn = await listen<TranslationData>("translation-data", (event) => {
-        setData(event.payload);
-        // Set window title
-        const win = getCurrentWebviewWindow();
-        const preview = event.payload.selectedText.slice(0, 30);
-        win.setTitle(
-          `Translation: ${preview}${event.payload.selectedText.length > 30 ? "..." : ""}`,
-        );
-      });
+      unlistenFn = await listen<TranslationData>(
+        "translation-data",
+        (event) => {
+          setData(event.payload);
+          // Set window title
+          const win = getCurrentWebviewWindow();
+          const preview = event.payload.selectedText.slice(0, 30);
+          win.setTitle(
+            `Translation: ${preview}${event.payload.selectedText.length > 30 ? "..." : ""}`,
+          );
+        },
+      );
 
       // Notify parent that we're ready to receive data
       await emit("translation-ready", { windowLabel });
@@ -158,7 +161,7 @@ function TranslationContent() {
     return () => {
       safeUnlisten();
     };
-  }, [windowLabel])
+  }, [windowLabel]);
 
   // Handle Explanation button click
   const handleExplain = useCallback(() => {
@@ -317,7 +320,11 @@ function TranslationContent() {
           {/* Explanation Section */}
           {(explanationSummary ||
             (explanationPoints && explanationPoints.length > 0)) && (
-            <CollapsibleSection title="Penjelasan" icon={Sparkles} defaultOpen={true}>
+            <CollapsibleSection
+              title="Penjelasan"
+              icon={Sparkles}
+              defaultOpen={true}
+            >
               <div className="space-y-3">
                 {/* Summary */}
                 {explanationSummary && (
