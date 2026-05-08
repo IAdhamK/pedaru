@@ -17,8 +17,9 @@ import type {
 // Default Values
 // ============================================
 
-export const DEFAULT_GEMINI_MODEL = "qwen/qwen3.5-9b";
-export const DEFAULT_GEMINI_EXPLANATION_MODEL = "qwen/qwen3.5-9b";
+export const AUTO_GEMINI_MODEL = "auto";
+export const DEFAULT_GEMINI_MODEL = AUTO_GEMINI_MODEL;
+export const DEFAULT_GEMINI_EXPLANATION_MODEL = AUTO_GEMINI_MODEL;
 
 export const DEFAULT_GEMINI_SETTINGS: GeminiSettings = {
   apiKey: "",
@@ -32,14 +33,19 @@ export const DEFAULT_GEMINI_SETTINGS: GeminiSettings = {
 
 export const GEMINI_MODELS: GeminiModelOption[] = [
   {
-    id: "qwen/qwen3.5-9b",
-    name: "Qwen 3.5 9B",
-    description: "LM Studio local model (Recommended)",
+    id: AUTO_GEMINI_MODEL,
+    name: "Auto (LM Studio Active Model)",
+    description: "Use the currently available model from LM Studio",
   },
   {
-    id: "qwen/qwen3-8b",
-    name: "Qwen 3 8B",
+    id: "google/gemma-4-e2b",
+    name: "Gemma 4 E2B",
     description: "Fast local option",
+  },
+  {
+    id: "google/gemma-4-e4b",
+    name: "Gemma 4 E4B",
+    description: "Balanced quality/speed",
   },
   {
     id: "meta-llama-3.1-8b-instruct",

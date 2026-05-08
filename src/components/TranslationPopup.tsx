@@ -679,7 +679,10 @@ export default function TranslationPopup({
                 <span>
                   Translation:{" "}
                   {GEMINI_MODELS.find((m) => m.id === geminiSettings.model)
-                    ?.name || geminiSettings.model}
+                    ?.name ||
+                    (geminiSettings.model === "auto"
+                      ? "Auto (LM Studio Active Model)"
+                      : geminiSettings.model)}
                 </span>
               </div>
             )}
@@ -691,7 +694,10 @@ export default function TranslationPopup({
                   Explanation:{" "}
                   {GEMINI_MODELS.find(
                     (m) => m.id === geminiSettings.explanationModel,
-                  )?.name || geminiSettings.explanationModel}
+                  )?.name ||
+                    (geminiSettings.explanationModel === "auto"
+                      ? "Auto (LM Studio Active Model)"
+                      : geminiSettings.explanationModel)}
                 </span>
               </div>
             )}

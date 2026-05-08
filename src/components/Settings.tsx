@@ -328,8 +328,9 @@ export default function Settings({
                 >
                   Translation Model
                 </label>
-                <select
+                <input
                   id="translation-model"
+                  list="translation-model-options"
                   value={geminiSettings.model}
                   onChange={(e) =>
                     setGeminiSettings({
@@ -337,16 +338,19 @@ export default function Settings({
                       model: e.target.value,
                     })
                   }
+                  placeholder="auto"
                   className="w-full px-3 py-2 bg-bg-primary border border-bg-tertiary rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
+                />
+                <datalist id="translation-model-options">
                   {GEMINI_MODELS.map((model) => (
                     <option key={model.id} value={model.id}>
-                      {model.name} - {model.description}
+                      {model.name}
                     </option>
                   ))}
-                </select>
+                </datalist>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  Model used when translating with Cmd+D
+                  Use `auto` to follow active LM Studio model, or type exact
+                  model ID manually.
                 </p>
               </div>
 
@@ -358,8 +362,9 @@ export default function Settings({
                 >
                   Explanation Model
                 </label>
-                <select
+                <input
                   id="explanation-model"
+                  list="explanation-model-options"
                   value={geminiSettings.explanationModel}
                   onChange={(e) =>
                     setGeminiSettings({
@@ -367,17 +372,19 @@ export default function Settings({
                       explanationModel: e.target.value,
                     })
                   }
+                  placeholder="auto"
                   className="w-full px-3 py-2 bg-bg-primary border border-bg-tertiary rounded-lg text-text-primary focus:outline-none focus:ring-2 focus:ring-accent/50"
-                >
+                />
+                <datalist id="explanation-model-options">
                   {GEMINI_MODELS.map((model) => (
                     <option key={model.id} value={model.id}>
-                      {model.name} - {model.description}
+                      {model.name}
                     </option>
                   ))}
-                </select>
+                </datalist>
                 <p className="mt-1 text-xs text-text-tertiary">
-                  Model used when clicking the "Explanation" button (a more
-                  capable model is recommended)
+                  Use `auto` to follow active LM Studio model, or set different
+                  model ID for explanation.
                 </p>
               </div>
 

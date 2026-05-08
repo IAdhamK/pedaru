@@ -23,9 +23,25 @@ pub const KEY_GEMINI_MODEL: &str = "gemini_model";
 pub const KEY_GEMINI_EXPLANATION_MODEL: &str = "gemini_explanation_model";
 
 /// Default model for translation (LM Studio local)
-pub const DEFAULT_GEMINI_MODEL: &str = "qwen/qwen3.5-9b";
+pub const DEFAULT_GEMINI_MODEL: &str = "auto";
 /// Default model for detailed explanation (LM Studio local)
-pub const DEFAULT_GEMINI_EXPLANATION_MODEL: &str = "qwen/qwen3.5-9b";
+pub const DEFAULT_GEMINI_EXPLANATION_MODEL: &str = "auto";
+
+fn is_supported_local_model_id(model_id: &str) -> bool {
+    let lowered = model_id.to_lowercase();
+    [
+        "gemma",
+        "llama",
+        "mistral",
+        "deepseek",
+        "phi",
+        "granite",
+        "command-r",
+        "gpt-oss",
+    ]
+    .iter()
+    .any(|hint| lowered.contains(hint))
+}
 
 // ============================================================================
 // Types
@@ -102,13 +118,19 @@ pub fn get_gemini_settings(app: &tauri::AppHandle) -> Result<GeminiSettings, Ped
     let explanation_raw = get_setting(app, KEY_GEMINI_EXPLANATION_MODEL)?
         .unwrap_or_else(|| DEFAULT_GEMINI_EXPLANATION_MODEL.to_string());
 
-    // Auto-migrate legacy Gemini cloud model IDs to LM Studio local default model.
-    let model = if model_raw.starts_with("gemini-") {
+    // Auto-migrate unsupported or legacy cloud model IDs to "auto".
+    let model = if model_raw.starts_with("gemini-")
+        || model_raw.trim().is_empty()
+        || !is_supported_local_model_id(&model_raw)
+    {
         DEFAULT_GEMINI_MODEL.to_string()
     } else {
         model_raw
     };
-    let explanation_model = if explanation_raw.starts_with("gemini-") {
+    let explanation_model = if explanation_raw.starts_with("gemini-")
+        || explanation_raw.trim().is_empty()
+        || !is_supported_local_model_id(&explanation_raw)
+    {
         DEFAULT_GEMINI_EXPLANATION_MODEL.to_string()
     } else {
         explanation_raw
